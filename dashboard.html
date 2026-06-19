@@ -142,6 +142,16 @@
             background: #c0392b;
         }
 
+        #userEmail {
+            color: #666;
+            margin-right: 20px;
+        }
+
+        #lastUpdate {
+            font-size: 16px;
+            white-space: nowrap;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -364,7 +374,7 @@
         <div class="navbar">
             <h1>🔍 Mspay Do Admin Dashboard</h1>
             <div class="navbar-actions">
-                <span id="userEmail" style="color: #666; margin-right: 20px;"></span>
+                <span id="userEmail"></span>
                 <button class="btn btn-logout" onclick="logout()">Logout</button>
             </div>
         </div>
@@ -385,7 +395,7 @@
             </div>
             <div class="stat-card">
                 <h3>Last Update</h3>
-                <div class="value" id="lastUpdate" style="font-size: 16px; white-space: nowrap;">--:--:--</div>
+                <div class="value" id="lastUpdate">--:--:--</div>
             </div>
         </div>
 
