@@ -1,6 +1,5 @@
 fastapi
-deta
 python-multipart
 fastapi-jwt-auth
 firebase-admin
-python-dotenv
+uvicorn
