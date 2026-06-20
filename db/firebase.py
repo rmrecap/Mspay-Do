@@ -82,7 +82,10 @@ class FirebaseWrapper:
     
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         """Get a single record by key"""
-        data = self.ref.child(key).get().val()
+        result = self.ref.child(key).get()
+        if result is None:
+            return None
+        data = result.val()
         if data:
             data['key'] = key
         return data
@@ -104,7 +107,10 @@ class FirebaseWrapper:
     
     def fetch(self) -> 'FetchResult':
         """Fetch all records and return as FetchResult object"""
-        data = self.ref.get().val()
+        result = self.ref.get()
+        if result is None:
+            return FetchResult([])
+        data = result.val()
         if not data:
             data = {}
         items = []
