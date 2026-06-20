@@ -104,7 +104,7 @@ class FirebaseWrapper:
         self.ref.child(key).delete()
         return True
     
-    def fetch(self) -> 'FetchResult':
+    def fetch(self, query: Optional[Dict[str, Any]] = None) -> 'FetchResult':
         """Fetch all records and return as FetchResult object"""
         data = self.ref.get()
         if data is None:
@@ -113,7 +113,8 @@ class FirebaseWrapper:
         for key, value in data.items():
             if isinstance(value, dict):
                 value['key'] = key
-                items.append(value)
+                if query is None or all(value.get(k) == v for k, v in query.items()):
+                    items.append(value)
         return FetchResult(items)
 
 
