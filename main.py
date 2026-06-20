@@ -1,3 +1,5 @@
+import render_setup
+
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
